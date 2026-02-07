@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:gozapper/core/constants/app_colors.dart';
-import 'package:gozapper/domain/entities/notification.dart' as notification_entity;
-import 'package:gozapper/core/extension/inbuilt_ext.dart';
-import 'package:share_plus/share_plus.dart';
+import 'package:gozapper/domain/entities/notification.dart'
+    as notification_entity;
+// import 'package:share_plus/share_plus.dart';
 
 class NotificationTile extends StatelessWidget {
   final notification_entity.Notification notification;
@@ -64,14 +64,14 @@ class NotificationTile extends StatelessWidget {
               ),
               const Divider(height: 1),
               // Share action
-              ListTile(
-                leading: const Icon(Icons.share, color: AppColors.primary),
-                title: const Text('Share'),
-                onTap: () {
-                  Navigator.pop(context);
-                  _shareNotification();
-                },
-              ),
+              // ListTile(
+              //   leading: const Icon(Icons.share, color: AppColors.primary),
+              //   title: const Text('Share'),
+              //   onTap: () {
+              //     Navigator.pop(context);
+              //     _shareNotification();
+              //   },
+              // ),
               // Delete action
               ListTile(
                 leading: const Icon(Icons.delete, color: AppColors.error),
@@ -115,10 +115,10 @@ class NotificationTile extends StatelessWidget {
   }
 
   /// Share notification
-  void _shareNotification() {
-    final text = '${notification.title}\n\n${notification.message}';
-    Share.share(text);
-  }
+  // void _shareNotification() {
+  //   final text = '${notification.title}\n\n${notification.message}';
+  //   Share.share(text);
+  // }
 
   @override
   Widget build(BuildContext context) {

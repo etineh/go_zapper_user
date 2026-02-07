@@ -13,9 +13,13 @@ import 'package:gozapper/domain/repositories/auth_repository.dart';
 import 'package:gozapper/domain/repositories/credential_repository.dart';
 import 'package:gozapper/domain/repositories/delivery_repository.dart';
 import 'package:gozapper/domain/repositories/payment_method_repository.dart';
+import 'package:gozapper/data/datasources/notification_remote_datasource.dart';
+import 'package:gozapper/data/repositories/notification_repository_impl.dart';
+import 'package:gozapper/domain/repositories/notification_repository.dart';
 import 'package:gozapper/presentation/providers/auth_provider.dart';
 import 'package:gozapper/presentation/providers/credential_provider.dart';
 import 'package:gozapper/presentation/providers/delivery_provider.dart';
+import 'package:gozapper/presentation/providers/notification_provider.dart';
 import 'package:gozapper/presentation/providers/payment_method_provider.dart';
 import 'package:logger/logger.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -32,18 +36,21 @@ class Injection {
   static late final CredentialRemoteDataSource _credentialRemoteDataSource;
   static late final DeliveryRemoteDataSource _deliveryRemoteDataSource;
   static late final PaymentMethodRemoteDataSource _paymentMethodRemoteDataSource;
+  static late final NotificationRemoteDataSource _notificationRemoteDataSource;
 
   // Repositories
   static late final AuthRepository _authRepository;
   static late final CredentialRepository _credentialRepository;
   static late final DeliveryRepository _deliveryRepository;
   static late final PaymentMethodRepository _paymentMethodRepository;
+  static late final NotificationRepository _notificationRepository;
 
   // Providers
   static late final AuthProvider authProvider;
   static late final CredentialProvider credentialProvider;
   static late final DeliveryProvider deliveryProvider;
   static late final PaymentMethodProvider paymentMethodProvider;
+  static late final NotificationProvider notificationProvider;
 
   static Future<void> init() async {
     // Core
@@ -89,6 +96,10 @@ class Injection {
       apiClient: _apiClient,
     );
 
+    _notificationRemoteDataSource = NotificationRemoteDataSourceImpl(
+      apiClient: _apiClient,
+    );
+
     // Repositories
     _authRepository = AuthRepositoryImpl(
       remoteDataSource: _authRemoteDataSource,
@@ -107,6 +118,10 @@ class Injection {
       remoteDataSource: _paymentMethodRemoteDataSource,
     );
 
+    _notificationRepository = NotificationRepositoryImpl(
+      remoteDataSource: _notificationRemoteDataSource,
+    );
+
     // Providers
     // Note: Create credentialProvider first so it can be injected into authProvider
     credentialProvider = CredentialProvider(credentialRepository: _credentialRepository);
@@ -116,6 +131,7 @@ class Injection {
     );
     deliveryProvider = DeliveryProvider(deliveryRepository: _deliveryRepository);
     paymentMethodProvider = PaymentMethodProvider(paymentMethodRepository: _paymentMethodRepository);
+    notificationProvider = NotificationProvider(notificationRepository: _notificationRepository);
 
     // Inject delivery and payment method providers into auth provider for clearing user data on logout
     authProvider.setDeliveryProvider(deliveryProvider);

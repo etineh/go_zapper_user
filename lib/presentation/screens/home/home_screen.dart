@@ -505,7 +505,7 @@ class _NotificationZapCard extends StatelessWidget {
           Row(
             children: [
               GestureDetector(
-                onTap: () => SnackBarUtils.showInfo(context, "in progress"),
+                onTap: () => context.goNextScreen(AppRoutes.notifications),
                 child: Stack(
                   children: [
                     Container(
@@ -538,7 +538,7 @@ class _NotificationZapCard extends StatelessWidget {
               const SizedBox(width: 12),
               Expanded(
                 child: GestureDetector(
-                  onTap: () => SnackBarUtils.showInfo(context, "in progress"),
+                  onTap: () => context.goNextScreen(AppRoutes.notifications),
                   child: const Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [

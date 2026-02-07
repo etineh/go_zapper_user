@@ -45,6 +45,7 @@ class MyApp extends StatelessWidget {
         ChangeNotifierProvider.value(value: Injection.credentialProvider),
         ChangeNotifierProvider.value(value: Injection.deliveryProvider),
         ChangeNotifierProvider.value(value: Injection.paymentMethodProvider),
+        ChangeNotifierProvider.value(value: Injection.notificationProvider),
       ],
       child: MaterialApp.router(
         title: AppConstants.appName,

@@ -26,10 +26,12 @@ class _NotificationScreenState extends State<NotificationScreen> {
 
     // Load notifications on first load
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      final provider = context.read<NotificationProvider>();
-      // Load 'all' notifications on first load if not already loaded
-      if (!provider.isFilterLoaded && !provider.isLoading) {
-        provider.fetchNotifications();
+      if (mounted) {
+        final provider = Provider.of<NotificationProvider>(context, listen: false);
+        // Load 'all' notifications on first load if not already loaded
+        if (!provider.isFilterLoaded && !provider.isLoading) {
+          provider.fetchNotifications();
+        }
       }
     });
   }
@@ -42,7 +44,7 @@ class _NotificationScreenState extends State<NotificationScreen> {
 
   /// Handle scroll to bottom for pagination
   void _onScroll() {
-    final provider = context.read<NotificationProvider>();
+    final provider = Provider.of<NotificationProvider>(context, listen: false);
     if (_scrollController.position.pixels ==
         _scrollController.position.maxScrollExtent) {
       provider.loadMoreNotifications();
@@ -60,7 +62,7 @@ class _NotificationScreenState extends State<NotificationScreen> {
 
   /// Handle notification delete
   Future<void> _handleNotificationDelete(notification_entity.Notification notification) async {
-    final provider = context.read<NotificationProvider>();
+    final provider = Provider.of<NotificationProvider>(context, listen: false);
     final success = await provider.deleteNotification(notification.id);
     if (success && mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -201,7 +203,7 @@ class _NotificationScreenState extends State<NotificationScreen> {
     return ListView.builder(
       controller: _scrollController,
       padding: const EdgeInsets.only(top: 8, bottom: 16),
-      itemCount: _calculateItemCount(groupedNotifications),
+      itemCount: _calculateItemCount(groupedNotifications, provider),
       itemBuilder: (context, index) {
         return _buildListItem(context, index, groupedNotifications, provider);
       },
@@ -209,13 +211,16 @@ class _NotificationScreenState extends State<NotificationScreen> {
   }
 
   /// Calculate total item count (headers + notifications + loading indicator)
-  int _calculateItemCount(Map<String, List<notification_entity.Notification>> grouped) {
+  int _calculateItemCount(
+    Map<String, List<notification_entity.Notification>> grouped,
+    NotificationProvider provider,
+  ) {
     int count = 0;
     for (final notifications in grouped.values) {
       count += 1 + notifications.length; // 1 header + notifications
     }
     // Add loading indicator if more data
-    if (context.read<NotificationProvider>().isLoadingMore) {
+    if (provider.isLoadingMore) {
       count += 1;
     }
     return count;

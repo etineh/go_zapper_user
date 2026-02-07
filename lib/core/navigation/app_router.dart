@@ -13,6 +13,7 @@ import 'package:gozapper/presentation/screens/auth/forgot_password/forgot_passwo
 import 'package:gozapper/presentation/screens/auth/forgot_password/reset_password_screen.dart';
 import 'package:gozapper/presentation/screens/home/home_screen.dart';
 import 'package:gozapper/presentation/screens/billing/payment_billing_screen.dart';
+import 'package:gozapper/presentation/screens/notification/notification_screen.dart';
 import 'package:gozapper/presentation/screens/onboarding/onboarding_screen.dart';
 import 'package:gozapper/presentation/screens/payment/add_payment_method_screen.dart';
 import 'package:gozapper/presentation/screens/profile/change_password_screen.dart';
@@ -89,6 +90,14 @@ class AppRouter {
         pageBuilder: (context, state) => MaterialPage(
           key: state.pageKey,
           child: const HomeScreen(),
+        ),
+      ),
+      GoRoute(
+        path: AppRoutes.notifications,
+        name: 'notifications',
+        pageBuilder: (context, state) => MaterialPage(
+          key: state.pageKey,
+          child: const NotificationScreen(),
         ),
       ),
       GoRoute(

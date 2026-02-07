@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:gozapper/core/constants/app_colors.dart';
 import 'package:gozapper/core/extension/inbuilt_ext.dart';
-import 'package:gozapper/domain/entities/notification.dart' as notification_entity;
+import 'package:gozapper/domain/entities/notification.dart'
+    as notification_entity;
 import 'package:gozapper/presentation/providers/notification_provider.dart';
 import 'package:gozapper/presentation/widgets/custom_app_bar.dart';
 import 'package:provider/provider.dart';
-import 'package:share_plus/share_plus.dart';
+// import 'package:share_plus/share_plus.dart';
 
 class NotificationDetailScreen extends StatelessWidget {
   final notification_entity.Notification notification;
@@ -87,10 +88,10 @@ class NotificationDetailScreen extends StatelessWidget {
   }
 
   /// Share notification
-  void _shareNotification() {
-    final text = '${notification.title}\n\n${notification.message}';
-    Share.share(text);
-  }
+  // void _shareNotification() {
+  //   final text = '${notification.title}\n\n${notification.message}';
+  //   Share.share(text);
+  // }
 
   /// Delete notification
   Future<void> _deleteNotification(BuildContext context) async {
@@ -107,8 +108,8 @@ class NotificationDetailScreen extends StatelessWidget {
           ),
           TextButton(
             onPressed: () => Navigator.pop(context, true),
-            child: const Text('Delete',
-                style: TextStyle(color: AppColors.error)),
+            child:
+                const Text('Delete', style: TextStyle(color: AppColors.error)),
           ),
         ],
       ),
@@ -208,7 +209,7 @@ class NotificationDetailScreen extends StatelessWidget {
               _formatDate(notification.createdAt),
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
                     color: AppColors.textHint,
-              ),
+                  ),
             ),
             const SizedBox(height: 24),
             // Message
@@ -291,19 +292,19 @@ class NotificationDetailScreen extends StatelessWidget {
             // Action buttons
             Row(
               children: [
-                Expanded(
-                  child: ElevatedButton.icon(
-                    icon: const Icon(Icons.share),
-                    label: const Text('Share'),
-                    onPressed: _shareNotification,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.primary,
-                      foregroundColor: AppColors.white,
-                      padding: const EdgeInsets.symmetric(vertical: 12),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 12),
+                // Expanded(
+                //   child: ElevatedButton.icon(
+                //     icon: const Icon(Icons.share),
+                //     label: const Text('Share'),
+                //     onPressed: _shareNotification,
+                //     style: ElevatedButton.styleFrom(
+                //       backgroundColor: AppColors.primary,
+                //       foregroundColor: AppColors.white,
+                //       padding: const EdgeInsets.symmetric(vertical: 12),
+                //     ),
+                //   ),
+                // ),
+                // const SizedBox(width: 12),
                 Expanded(
                   child: ElevatedButton.icon(
                     icon: const Icon(Icons.delete),
