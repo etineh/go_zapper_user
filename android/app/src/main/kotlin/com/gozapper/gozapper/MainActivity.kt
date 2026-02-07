@@ -1,0 +1,5 @@
+package com.gozapper.gozapper
+
+import io.flutter.embedding.android.FlutterFragmentActivity
+
+class MainActivity: FlutterFragmentActivity()
