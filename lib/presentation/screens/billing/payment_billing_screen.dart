@@ -5,6 +5,7 @@ import 'package:gozapper/data/models/transaction_model.dart';
 import 'package:gozapper/presentation/providers/auth_provider.dart';
 import 'package:gozapper/presentation/providers/credential_provider.dart';
 import 'package:gozapper/presentation/providers/payment_method_provider.dart';
+import 'package:gozapper/presentation/screens/billing/transaction_detail_screen.dart';
 import 'package:gozapper/presentation/widgets/custom_app_bar.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
@@ -33,11 +34,17 @@ class _PaymentBillingScreenState extends State<PaymentBillingScreen> {
 
     // Only fetch payment method details if user has payment ID
     if (user != null && user.paymentId != null && user.paymentId!.isNotEmpty) {
-      await paymentProvider.getPaymentMethodDetails();
+      // Retry once if payment method isn't found on first attempt (timing issue)
+      final result = await paymentProvider.getPaymentMethodDetails();
+      if (!result && paymentProvider.paymentMethodDetails == null) {
+        // Small delay and retry once to account for Paystack processing time
+        await Future.delayed(const Duration(seconds: 1));
+        await paymentProvider.getPaymentMethodDetails();
+      }
     }
 
     // Always try to fetch transactions
-    await paymentProvider.getTransactions(limit: 10);
+    await paymentProvider.getTransactions(limit: 30);
   }
 
   @override
@@ -309,9 +316,9 @@ class _PaymentBillingScreenState extends State<PaymentBillingScreen> {
       child: Column(
         children: [
           _buildSummaryRow(
-              'This Month', '\$${thisMonthTotal.toStringAsFixed(2)}'),
+              'This Month', '₦${thisMonthTotal.toStringAsFixed(2)}'),
           const Divider(height: 24),
-          _buildSummaryRow('Last Charge', '\$${lastCharge.toStringAsFixed(2)}'),
+          _buildSummaryRow('Last Charge', '₦${lastCharge.toStringAsFixed(2)}'),
         ],
       ),
     );
@@ -342,9 +349,7 @@ class _PaymentBillingScreenState extends State<PaymentBillingScreen> {
     final thisMonthStart = DateTime(now.year, now.month, 1);
 
     return transactions
-        .where((t) =>
-            t.createdAt.isAfter(thisMonthStart) &&
-            t.transactionType == 'charge')
+        .where((t) => t.createdAt.isAfter(thisMonthStart))
         .fold(0.0, (sum, t) => sum + t.amount);
   }
 
@@ -392,6 +397,14 @@ class _PaymentBillingScreenState extends State<PaymentBillingScreen> {
     final dateFormat = DateFormat('MMM dd, yyyy • hh:mm a');
 
     return ListTile(
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => TransactionDetailScreen(transaction: transaction),
+          ),
+        );
+      },
       leading: CircleAvatar(
         backgroundColor: isCharge
             ? Colors.red.withOpacity(0.1)
@@ -411,7 +424,7 @@ class _PaymentBillingScreenState extends State<PaymentBillingScreen> {
         style: TextStyle(fontSize: 12, color: Colors.grey[600]),
       ),
       trailing: Text(
-        '${isCharge ? '-' : '+'}\$${transaction.amount.toStringAsFixed(2)}',
+        '${isCharge ? '-' : '+'}₦${transaction.amount.toStringAsFixed(2)}',
         style: TextStyle(
           fontSize: 16,
           fontWeight: FontWeight.bold,

@@ -66,9 +66,12 @@ class AppConstants {
   static const int minNameLength = 2;
   static const int maxNameLength = 50;
 
-  // Stripe Configuration
-  static const String stripePublishableKey =
-      'pk_test_51SWhc0Qj4OfczuROnLvAzJbGThrgjZ92yYlCKssMv9dq4tUaC4iEF0TNxsRBQCcdEiL00XYnA7HciW8knMaZjc6900b27rUph2';
+  // Paystack Configuration
+  static const String paystackPublicKey =
+      'pk_test_073b3ecde0229eca0ab42d5c19557b77d2538a11';
+
+  // Amount in kobo for card verification (₦50)
+  static const int paystackVerificationAmountKobo = 5000;
 
   // Vehicle Types
   static const String vehicleTypeMotorcycle = 'Bike';

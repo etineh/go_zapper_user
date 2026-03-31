@@ -1,14 +1,14 @@
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter_stripe/flutter_stripe.dart';
-import 'package:gozapper/core/constants/app_constants.dart';
 import 'package:gozapper/core/constants/app_theme.dart';
 import 'package:gozapper/core/di/injection.dart';
 import 'package:gozapper/core/navigation/app_router.dart';
 import 'package:gozapper/core/services/notification_service.dart';
 import 'package:gozapper/firebase_options.dart';
 import 'package:provider/provider.dart';
+
+import 'core/constants/app_constants.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -26,10 +26,6 @@ void main() async {
 
   // Initialize dependencies
   await Injection.init();
-
-  // Initialize Stripe
-  Stripe.publishableKey = AppConstants.stripePublishableKey;
-  await Stripe.instance.applySettings();
 
   runApp(const MyApp());
 }

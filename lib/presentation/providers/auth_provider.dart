@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:gozapper/core/services/notification_service.dart';
 import 'package:gozapper/domain/entities/user.dart';
 import 'package:gozapper/domain/repositories/auth_repository.dart';
@@ -13,6 +14,7 @@ user id - 5d41e863-1bae-46d5-8834-cbae990629b7
 class AuthProvider extends ChangeNotifier {
   final AuthRepository authRepository;
   final CredentialProvider? credentialProvider;
+  final _secureStorage = const FlutterSecureStorage();
 
   // Optional references to other providers for clearing user data on logout
   dynamic _deliveryProvider;
@@ -149,6 +151,11 @@ class AuthProvider extends ChangeNotifier {
         _user = user;
         _setStatus(AuthStatus.authenticated);
         success = true;
+        // Store payment_id in secure storage for use in delivery requests (Paystack)
+        if (user.paymentId != null && user.paymentId!.isNotEmpty) {
+          await _secureStorage.write(key: 'paymentId', value: user.paymentId!);
+        }
+        await _secureStorage.write(key: 'organizationId', value: user.id);
         // Load active credential after successful login
         await credentialProvider?.fetchActiveCredential();
         // Send device token to backend for push notifications
@@ -244,6 +251,11 @@ class AuthProvider extends ChangeNotifier {
       },
       (user) {
         _user = user;
+        // Store payment_id in secure storage for use in delivery requests (Paystack)
+        if (user.paymentId != null && user.paymentId!.isNotEmpty) {
+          _secureStorage.write(key: 'paymentId', value: user.paymentId!);
+        }
+        _secureStorage.write(key: 'organizationId', value: user.id);
         notifyListeners();
         success = true;
       },

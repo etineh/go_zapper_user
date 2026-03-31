@@ -57,6 +57,45 @@ class _AdvancedSettingsScreenState extends State<AdvancedSettingsScreen> {
     );
   }
 
+  void _showDownloadConfirmDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Row(
+          children: [
+            Icon(Icons.download_outlined, color: AppColors.primary),
+            SizedBox(width: 8),
+            Expanded(child: Text('Download My Data')),
+          ],
+        ),
+        content: const Text(
+          'This will export all your account data to a JSON file. Continue?',
+          style: TextStyle(
+            color: AppColors.textSecondary,
+            fontSize: 14,
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(context);
+              _downloadMyData();
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.primary,
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('Download'),
+          ),
+        ],
+      ),
+    );
+  }
+
   Future<void> _downloadMyData() async {
     // Show loading dialog
     context.showLoadingDialog();
@@ -162,6 +201,45 @@ class _AdvancedSettingsScreenState extends State<AdvancedSettingsScreen> {
     }
   }
 
+  void _showClearCacheConfirmDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Row(
+          children: [
+            Icon(Icons.warning_amber_rounded, color: Colors.orange),
+            SizedBox(width: 8),
+            Expanded(child: Text('Clear Cache')),
+          ],
+        ),
+        content: const Text(
+          'This will clear all cached data and free up storage space. Continue?',
+          style: TextStyle(
+            color: AppColors.textSecondary,
+            fontSize: 14,
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(context);
+              _clearCache();
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.orange,
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('Clear'),
+          ),
+        ],
+      ),
+    );
+  }
+
   Future<void> _clearCache() async {
     // Show loading dialog
     showDialog(
@@ -214,250 +292,6 @@ class _AdvancedSettingsScreenState extends State<AdvancedSettingsScreen> {
     }
   }
 
-  Widget _buildAPICredentialsSection() {
-    final authProvider = context.watch<AuthProvider>();
-    final credentialProvider = context.watch<CredentialProvider>();
-    final user = authProvider.user;
-    final credentials = credentialProvider.credentials;
-    final isLoading = credentialProvider.status == CredentialStatus.loading;
-
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Padding(
-            padding: const EdgeInsets.all(16),
-            child: Row(
-              children: [
-                const Text(
-                  '🔑 API Credentials',
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                ),
-                const Spacer(),
-                if (isLoading)
-                  const SizedBox(
-                    width: 16,
-                    height: 16,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  ),
-              ],
-            ),
-          ),
-          const Divider(height: 1),
-          if (credentials.isEmpty && !isLoading)
-            const Padding(
-              padding: EdgeInsets.all(16),
-              child: Text(
-                'No credentials found',
-                style: TextStyle(color: Colors.grey),
-              ),
-            )
-          else
-            ...credentials.map((credential) {
-              final color = credential.environment == 'sandbox'
-                  ? Colors.orange
-                  : Colors.green;
-              return _buildCredentialCard(
-                  credential, color, credentialProvider);
-            }).toList(),
-          Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              children: [
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton.icon(
-                    onPressed: () async {
-                      final success = await credentialProvider
-                          .createSandboxCredential('Sandbox API Credential');
-                      if (success && mounted) {
-                        await authProvider.refreshProfile();
-                        await _loadCredentials();
-                        SnackBarUtils.showSuccess(
-                            context, 'Sandbox credential created!');
-                      }
-                    },
-                    icon: const Icon(Icons.add),
-                    label: const Text('Create Sandbox Credential'),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.orange,
-                      foregroundColor: Colors.white,
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 12),
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton.icon(
-                    onPressed: user?.paymentId != null
-                        ? () async {
-                            final success = await credentialProvider
-                                .createProductionCredential(
-                                    'Production API Credential');
-                            if (success && mounted) {
-                              await authProvider.refreshProfile();
-                              await _loadCredentials();
-                              SnackBarUtils.showSuccess(
-                                  context, 'Production credential created!');
-                            }
-                          }
-                        : null,
-                    icon: const Icon(Icons.add),
-                    label: const Text('Create Production Credential'),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.primary,
-                      foregroundColor: Colors.white,
-                    ),
-                  ),
-                ),
-                if (user?.paymentId == null)
-                  Padding(
-                    padding: const EdgeInsets.only(top: 8),
-                    child: Text(
-                      'Payment method required for production',
-                      style: TextStyle(fontSize: 12, color: Colors.grey[600]),
-                    ),
-                  ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildCredentialCard(
-      credential, Color color, CredentialProvider provider) {
-    final maskedKey = credential.apiKey.length > 20
-        ? '${credential.apiKey.substring(0, 20)}...'
-        : credential.apiKey;
-
-    return Column(
-      children: [
-        const Divider(height: 1),
-        Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Container(
-                    width: 10,
-                    height: 10,
-                    decoration: BoxDecoration(
-                      color: credential.status ? color : Colors.grey[300],
-                      shape: BoxShape.circle,
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Text(
-                    credential.environment.toUpperCase(),
-                    style: const TextStyle(
-                      fontSize: 15,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                  const Spacer(),
-                  Switch(
-                    value: credential.status,
-                    onChanged: (value) async {
-                      context.showLoadingDialog();
-                      final success = await provider.updateCredentialStatus(
-                        credential.id,
-                        value,
-                      );
-                      if (success && mounted) {
-                        SnackBarUtils.showSuccess(
-                          context,
-                          value ? 'Credential enabled' : 'Credential disabled',
-                        );
-                      } else if (mounted) {
-                        SnackBarUtils.showError(
-                          context,
-                          provider.errorMessage ??
-                              'Failed to update credential',
-                        );
-                      }
-                      if (mounted) context.hideLoadingDialog();
-                    },
-                    activeColor: AppColors.primary,
-                  ),
-                ],
-              ),
-              const SizedBox(height: 8),
-              GestureDetector(
-                onTap: () => print("General log: api key tapped $credential"),
-                child: Text(
-                  'API Key: $maskedKey',
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: Colors.grey[600],
-                    fontFamily: 'monospace',
-                  ),
-                ),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                credential.status ? 'Active' : 'Inactive',
-                style: TextStyle(
-                  fontSize: 12,
-                  color: credential.status ? Colors.green : Colors.grey[600],
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildCredentialRow(String environment, bool isActive, Color color) {
-    return Row(
-      children: [
-        Container(
-          width: 10,
-          height: 10,
-          decoration: BoxDecoration(
-            color: isActive ? color : Colors.grey[300],
-            shape: BoxShape.circle,
-          ),
-        ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: Text(
-            environment,
-            style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w500),
-          ),
-        ),
-        Text(
-          isActive ? 'Active' : 'Not Set',
-          style: TextStyle(
-            fontSize: 14,
-            color: isActive ? color : Colors.grey[600],
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-        if (isActive) ...[
-          const SizedBox(width: 8),
-          Icon(Icons.check_circle, color: color, size: 20),
-        ],
-      ],
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -498,7 +332,7 @@ class _AdvancedSettingsScreenState extends State<AdvancedSettingsScreen> {
             const SizedBox(height: 24),
 
             // API Credentials Section
-            _buildAPICredentialsSection(),
+            // _buildAPICredentialsSection(),
 
             const SizedBox(height: 16),
 
@@ -596,14 +430,14 @@ class _AdvancedSettingsScreenState extends State<AdvancedSettingsScreen> {
                     icon: Icons.download_outlined,
                     title: 'Download My Data',
                     subtitle: 'Export all your account data',
-                    onTap: _downloadMyData,
+                    onTap: _showDownloadConfirmDialog,
                   ),
                   _buildActionTile(
                     context: context,
                     icon: Icons.clear_all_outlined,
                     title: 'Clear Cache',
                     subtitle: 'Free up storage space',
-                    onTap: _clearCache,
+                    onTap: _showClearCacheConfirmDialog,
                   ),
                 ],
               ),
@@ -768,6 +602,229 @@ class _AdvancedSettingsScreenState extends State<AdvancedSettingsScreen> {
       builder: (context) => _DeleteAccountDialog(user: user),
     );
   }
+
+  /*
+
+  Widget _buildAPICredentialsSection() {
+    final authProvider = context.watch<AuthProvider>();
+    final credentialProvider = context.watch<CredentialProvider>();
+    final user = authProvider.user;
+    final credentials = credentialProvider.credentials;
+    final isLoading = credentialProvider.status == CredentialStatus.loading;
+
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: Row(
+              children: [
+                const Text(
+                  '🔑 API Credentials',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                ),
+                const Spacer(),
+                if (isLoading)
+                  const SizedBox(
+                    width: 16,
+                    height: 16,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  ),
+              ],
+            ),
+          ),
+          const Divider(height: 1),
+          if (credentials.isEmpty && !isLoading)
+            const Padding(
+              padding: EdgeInsets.all(16),
+              child: Text(
+                'No credentials found',
+                style: TextStyle(color: Colors.grey),
+              ),
+            )
+          else
+            ...credentials.map((credential) {
+              final color = Colors.green;
+              return _buildCredentialCard(
+                  credential, color, credentialProvider);
+            }).toList(),
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              children: [
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton.icon(
+                    onPressed: user?.paymentId != null
+                        ? () async {
+                            final success = await credentialProvider
+                                .createProductionCredential(
+                                    'Production API Credential');
+                            if (success && mounted) {
+                              await authProvider.refreshProfile();
+                              await _loadCredentials();
+                              SnackBarUtils.showSuccess(
+                                  context, 'Production credential created!');
+                            }
+                          }
+                        : null,
+                    icon: const Icon(Icons.add),
+                    label: const Text('Create Production Credential'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.primary,
+                      foregroundColor: Colors.white,
+                    ),
+                  ),
+                ),
+                if (user?.paymentId == null)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 8),
+                    child: Text(
+                      'Payment method required for production',
+                      style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCredentialCard(
+      credential, Color color, CredentialProvider provider) {
+    final maskedKey = credential.apiKey.length > 20
+        ? '${credential.apiKey.substring(0, 20)}...'
+        : credential.apiKey;
+
+    return Column(
+      children: [
+        const Divider(height: 1),
+        Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    width: 10,
+                    height: 10,
+                    decoration: BoxDecoration(
+                      color: credential.status ? color : Colors.grey[300],
+                      shape: BoxShape.circle,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Text(
+                    credential.environment.toUpperCase(),
+                    style: const TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  const Spacer(),
+                  Switch(
+                    value: credential.status,
+                    onChanged: (value) async {
+                      context.showLoadingDialog();
+                      final success = await provider.updateCredentialStatus(
+                        credential.id,
+                        value,
+                      );
+                      if (success && mounted) {
+                        SnackBarUtils.showSuccess(
+                          context,
+                          value ? 'Credential enabled' : 'Credential disabled',
+                        );
+                      } else if (mounted) {
+                        SnackBarUtils.showError(
+                          context,
+                          provider.errorMessage ??
+                              'Failed to update credential',
+                        );
+                      }
+                      if (mounted) context.hideLoadingDialog();
+                    },
+                    activeColor: AppColors.primary,
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              GestureDetector(
+                onTap: () => print("General log: api key tapped $credential"),
+                child: Text(
+                  'API Key: $maskedKey',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: Colors.grey[600],
+                    fontFamily: 'monospace',
+                  ),
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                credential.status ? 'Active' : 'Inactive',
+                style: TextStyle(
+                  fontSize: 12,
+                  color: credential.status ? Colors.green : Colors.grey[600],
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildCredentialRow(String environment, bool isActive, Color color) {
+    return Row(
+      children: [
+        Container(
+          width: 10,
+          height: 10,
+          decoration: BoxDecoration(
+            color: isActive ? color : Colors.grey[300],
+            shape: BoxShape.circle,
+          ),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Text(
+            environment,
+            style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w500),
+          ),
+        ),
+        Text(
+          isActive ? 'Active' : 'Not Set',
+          style: TextStyle(
+            fontSize: 14,
+            color: isActive ? color : Colors.grey[600],
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        if (isActive) ...[
+          const SizedBox(width: 8),
+          Icon(Icons.check_circle, color: color, size: 20),
+        ],
+      ],
+    );
+  }
+   */
 }
 
 class _DeleteAccountDialog extends StatefulWidget {

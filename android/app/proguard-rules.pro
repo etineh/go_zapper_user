@@ -2,18 +2,7 @@
 # You can control the set of applied configuration files using the
 # proguardFiles setting in build.gradle.
 
-# Stripe SDK rules
--keep class com.stripe.android.** { *; }
--keep interface com.stripe.android.** { *; }
-
-# Suppress warnings for Stripe push provisioning classes (optional feature)
--dontwarn com.stripe.android.pushProvisioning.PushProvisioningActivity$g
--dontwarn com.stripe.android.pushProvisioning.PushProvisioningActivityStarter$Args
--dontwarn com.stripe.android.pushProvisioning.PushProvisioningActivityStarter$Error
--dontwarn com.stripe.android.pushProvisioning.PushProvisioningActivityStarter
--dontwarn com.stripe.android.pushProvisioning.PushProvisioningEphemeralKeyProvider
-
-# Keep Stripe models and data classes
+# Keep Parcelable classes
 -keepclassmembers class * implements android.os.Parcelable {
     public static final android.os.Parcelable$Creator *;
 }

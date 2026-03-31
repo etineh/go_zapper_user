@@ -24,8 +24,8 @@ class TransactionModel {
   factory TransactionModel.fromJson(Map<String, dynamic> json) {
     return TransactionModel(
       id: json['id'] ?? json['ID'] ?? '',
-      amount: (json['amount'] ?? 0).toDouble(),
-      currency: json['currency'] ?? 'usd',
+      amount: double.tryParse((json['Amount'] ?? json['amount'] ?? 0).toString()) ?? 0.0,
+      currency: json['Currency'] ?? json['currency'] ?? 'NGN',
       transactionType: json['transactionType'] ?? json['TransactionType'] ?? 'charge',
       paymentIntentID: json['paymentIntentID'] ?? json['PaymentIntentID'],
       refundIntentID: json['refundIntentID'] ?? json['RefundIntentID'],

@@ -366,14 +366,6 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "3.1.2"
-  flutter_stripe:
-    dependency: "direct main"
-    description:
-      name: flutter_stripe
-      sha256: c54d972c022c987688bf7315853968894776c7f792fea39136cfdaf526d2ca15
-      url: "https://pub.dev"
-    source: hosted
-    version: "11.1.0"
   flutter_svg:
     dependency: "direct main"
     description:
@@ -392,14 +384,6 @@ packages:
     description: flutter
     source: sdk
     version: "0.0.0"
-  freezed_annotation:
-    dependency: transitive
-    description:
-      name: freezed_annotation
-      sha256: c2e2d632dd9b8a2b7751117abcfc2b4888ecfe181bd9fca7170d9ef02e595fe2
-      url: "https://pub.dev"
-    source: hosted
-    version: "2.4.4"
   geocoding:
     dependency: "direct main"
     description:
@@ -648,14 +632,6 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "0.6.7"
-  json_annotation:
-    dependency: transitive
-    description:
-      name: json_annotation
-      sha256: "1ce844379ca14835a50d2f019a3099f419082cfdd231cd86a142af94dd5c6bb1"
-      url: "https://pub.dev"
-    source: hosted
-    version: "4.9.0"
   leak_tracker:
     dependency: transitive
     description:
@@ -1021,30 +997,6 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "1.2.0"
-  stripe_android:
-    dependency: "direct overridden"
-    description:
-      name: stripe_android
-      sha256: "4d752a704988bf710b0f7ac82daa3b4d4bd5e47ee28aebcb349f8310c2a1b0ab"
-      url: "https://pub.dev"
-    source: hosted
-    version: "11.1.0"
-  stripe_ios:
-    dependency: "direct overridden"
-    description:
-      name: stripe_ios
-      sha256: d46660f6de8ff76b70fc69fc7e658cc3500912cdec0cd54cd6a69d03a92884c1
-      url: "https://pub.dev"
-    source: hosted
-    version: "11.1.0"
-  stripe_platform_interface:
-    dependency: "direct overridden"
-    description:
-      name: stripe_platform_interface
-      sha256: "8cc2f0afe52aea82de2a65e26ece6ac0899471cf4c44ccc0bc0a938fde226e1d"
-      url: "https://pub.dev"
-    source: hosted
-    version: "11.1.0"
   term_glyph:
     dependency: transitive
     description:
@@ -1197,6 +1149,38 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "1.1.1"
+  webview_flutter:
+    dependency: "direct main"
+    description:
+      name: webview_flutter
+      sha256: "889a0a678e7c793c308c68739996227c9661590605e70b1f6cf6b9a6634f7aec"
+      url: "https://pub.dev"
+    source: hosted
+    version: "4.10.0"
+  webview_flutter_android:
+    dependency: transitive
+    description:
+      name: webview_flutter_android
+      sha256: "512c26ccc5b8a571fd5d13ec994b7509f142ff6faf85835e243dde3538fdc713"
+      url: "https://pub.dev"
+    source: hosted
+    version: "4.3.2"
+  webview_flutter_platform_interface:
+    dependency: transitive
+    description:
+      name: webview_flutter_platform_interface
+      sha256: "7cb32b21825bd65569665c32bb00a34ded5779786d6201f5350979d2d529940d"
+      url: "https://pub.dev"
+    source: hosted
+    version: "2.13.0"
+  webview_flutter_wkwebview:
+    dependency: transitive
+    description:
+      name: webview_flutter_wkwebview
+      sha256: a3d461fe3467014e05f3ac4962e5fdde2a4bf44c561cb53e9ae5c586600fdbc3
+      url: "https://pub.dev"
+    source: hosted
+    version: "3.22.0"
   win32:
     dependency: transitive
     description:

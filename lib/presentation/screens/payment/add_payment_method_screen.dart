@@ -1,11 +1,14 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
-import 'package:flutter_stripe/flutter_stripe.dart';
 import 'package:go_router/go_router.dart';
 import 'package:gozapper/core/constants/app_colors.dart';
+import 'package:gozapper/core/constants/app_constants.dart';
 import 'package:gozapper/presentation/providers/auth_provider.dart';
 import 'package:gozapper/presentation/providers/payment_method_provider.dart';
 import 'package:gozapper/presentation/widgets/custom_app_bar.dart';
 import 'package:provider/provider.dart';
+import 'package:webview_flutter/webview_flutter.dart';
 
 class AddPaymentMethodScreen extends StatefulWidget {
   const AddPaymentMethodScreen({super.key});
@@ -15,13 +18,198 @@ class AddPaymentMethodScreen extends StatefulWidget {
 }
 
 class _AddPaymentMethodScreenState extends State<AddPaymentMethodScreen> {
-  CardFieldInputDetails? _cardDetails;
-  bool _isCardComplete = false;
+  late WebViewController _webViewController;
+  bool _isLoading = true;
+  bool _isProcessing = false;
+  String? _errorMessage;
+
+  @override
+  void initState() {
+    super.initState();
+    _initWebView();
+  }
+
+  void _initWebView() {
+    final authProvider = context.read<AuthProvider>();
+    final user = authProvider.user;
+    final email = user?.email ?? '';
+    final paymentID = user?.paymentId ?? ''; // Customer code from Paystack
+    final reference =
+        'gozapper_verify_${DateTime.now().millisecondsSinceEpoch}';
+
+    _webViewController = WebViewController()
+      ..setJavaScriptMode(JavaScriptMode.unrestricted)
+      ..setNavigationDelegate(
+        NavigationDelegate(
+          onPageFinished: (url) {
+            if (mounted) {
+              setState(() => _isLoading = false);
+            }
+          },
+          onWebResourceError: (WebResourceError error) {
+            if (mounted) {
+              setState(() {
+                _isLoading = false;
+                _errorMessage =
+                    'Failed to load payment page. Please check your internet connection.';
+              });
+            }
+          },
+        ),
+      )
+      ..addJavaScriptChannel(
+        'PaystackResult',
+        onMessageReceived: (JavaScriptMessage message) {
+          _handlePaystackResult(message.message);
+        },
+      )
+      ..loadHtmlString(_buildPaystackHtml(email, paymentID, reference));
+  }
+
+  String _buildPaystackHtml(String email, String paymentID, String reference) {
+    return '''
+<!DOCTYPE html>
+<html>
+<head>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <style>
+    body {
+      margin: 0;
+      padding: 20px;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #f5f5f5;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      box-sizing: border-box;
+    }
+    .loading {
+      text-align: center;
+      color: #666;
+      font-size: 16px;
+    }
+    .spinner {
+      border: 3px solid #f3f3f3;
+      border-top: 3px solid #0A2463;
+      border-radius: 50%;
+      width: 40px;
+      height: 40px;
+      animation: spin 1s linear infinite;
+      margin: 0 auto 16px;
+    }
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+  </style>
+</head>
+<body>
+  <div class="loading">
+    <div class="spinner"></div>
+    <p>Initializing secure payment...</p>
+  </div>
+
+  <script src="https://js.paystack.co/v2/inline.js"></script>
+  <script>
+    try {
+      const popup = new PaystackPop();
+      popup.newTransaction({
+        key: '${AppConstants.paystackPublicKey}',
+        email: '$email',
+        amount: ${AppConstants.paystackVerificationAmountKobo},
+        currency: 'NGN',
+        ref: '$reference',
+        channels: ['card'],
+        label: 'Card Verification',
+        onSuccess: function(transaction) {
+          PaystackResult.postMessage(JSON.stringify({
+            status: 'success',
+            reference: transaction.reference
+          }));
+        },
+        onCancel: function() {
+          PaystackResult.postMessage(JSON.stringify({
+            status: 'cancelled'
+          }));
+        }
+      });
+    } catch(e) {
+      PaystackResult.postMessage(JSON.stringify({
+        status: 'error',
+        message: e.message || 'Failed to initialize payment'
+      }));
+    }
+  </script>
+</body>
+</html>
+''';
+  }
+
+  Future<void> _handlePaystackResult(String message) async {
+    try {
+      final result = jsonDecode(message);
+      final status = result['status'];
+
+      if (status == 'success') {
+        if (!mounted) return;
+        setState(() => _isProcessing = true);
+        final reference = result['reference'] as String;
+
+        // Send reference to backend — backend will verify with Paystack
+        // and the authorization gets linked to the customer automatically
+        final paymentProvider = context.read<PaymentMethodProvider>();
+        final success = await paymentProvider.savePaymentMethod(reference);
+
+        if (success && mounted) {
+          final authProvider = context.read<AuthProvider>();
+          await authProvider.refreshProfile();
+
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Payment method added successfully!'),
+                backgroundColor: Colors.green,
+              ),
+            );
+            context.pop(true);
+          }
+        } else if (mounted) {
+          setState(() {
+            _isProcessing = false;
+            _errorMessage =
+                paymentProvider.errorMessage ?? 'Failed to save payment method';
+          });
+        }
+      } else if (status == 'cancelled') {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Payment cancelled'),
+              backgroundColor: Colors.orange,
+            ),
+          );
+          context.pop(false);
+        }
+      } else if (status == 'error') {
+        if (mounted) {
+          setState(() {
+            _errorMessage =
+                result['message'] ?? 'Payment initialization failed';
+          });
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _errorMessage = 'An unexpected error occurred';
+        });
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
-    final paymentProvider = context.watch<PaymentMethodProvider>();
-
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: const CustomAppBar(
@@ -29,229 +217,66 @@ class _AddPaymentMethodScreenState extends State<AddPaymentMethodScreen> {
         titleColor: AppColors.white,
         backgroundColor: AppColors.primary,
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Info Card
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: Colors.blue.shade50,
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: Colors.blue.shade200),
-              ),
-              child: Row(
+      body: _isProcessing
+          ? const Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(Icons.info_outline, color: Colors.blue.shade700),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Text(
-                      'Your payment information is securely processed by Stripe. We never store your card details.',
-                      style: TextStyle(
-                        color: Colors.blue.shade900,
-                        fontSize: 13,
-                      ),
-                    ),
+                  CircularProgressIndicator(),
+                  SizedBox(height: 16),
+                  Text(
+                    'Saving payment method...',
+                    style:
+                        TextStyle(fontSize: 16, color: AppColors.textPrimary),
                   ),
                 ],
               ),
-            ),
-
-            const SizedBox(height: 24),
-
-            // Card Input Section
-            const Text(
-              'Card Details',
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w600,
-                color: AppColors.textPrimary,
-              ),
-            ),
-            const SizedBox(height: 12),
-
-            Container(
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(12),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.05),
-                    blurRadius: 10,
-                    offset: const Offset(0, 2),
-                  ),
-                ],
-              ),
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: CardField(
-                  onCardChanged: (card) {
-                    setState(() {
-                      _cardDetails = card;
-                      _isCardComplete = card?.complete ?? false;
-                    });
-                  },
-                  style: const TextStyle(
-                    fontSize: 16,
-                    color: AppColors.textPrimary,
-                  ),
-                  decoration: InputDecoration(
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(8),
-                      borderSide: BorderSide(color: Colors.grey.shade300),
-                    ),
-                    enabledBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(8),
-                      borderSide: BorderSide(color: Colors.grey.shade300),
-                    ),
-                    focusedBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(8),
-                      borderSide: const BorderSide(color: AppColors.primary, width: 2),
-                    ),
-                  ),
-                ),
-              ),
-            ),
-
-            const SizedBox(height: 24),
-
-            // Security Info
-            Row(
-              children: [
-                Icon(Icons.lock_outline, size: 16, color: Colors.grey.shade600),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    'Secured by Stripe - Industry-leading payment security',
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: Colors.grey.shade600,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-
-            const SizedBox(height: 32),
-
-            // Save Button
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: _isCardComplete && !paymentProvider.isSaving
-                    ? _handleSavePaymentMethod
-                    : null,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.primary,
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  disabledBackgroundColor: Colors.grey.shade300,
-                ),
-                child: paymentProvider.isSaving
-                    ? const SizedBox(
-                        width: 20,
-                        height: 20,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          color: Colors.white,
-                        ),
-                      )
-                    : const Text(
-                        'Save Payment Method',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 16,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-              ),
-            ),
-
-            if (paymentProvider.errorMessage != null) ...[
-              const SizedBox(height: 16),
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: Colors.red.shade50,
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: Colors.red.shade200),
-                ),
-                child: Row(
+            )
+          : _errorMessage != null
+              ? _buildErrorView()
+              : Stack(
                   children: [
-                    Icon(Icons.error_outline, color: Colors.red.shade700, size: 20),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        paymentProvider.errorMessage!,
-                        style: TextStyle(
-                          color: Colors.red.shade900,
-                          fontSize: 13,
-                        ),
-                      ),
-                    ),
+                    WebViewWidget(controller: _webViewController),
+                    // if (_isLoading)
+                    //   const Center(child: CircularProgressIndicator()),
                   ],
                 ),
+    );
+  }
+
+  Widget _buildErrorView() {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.error_outline, size: 64, color: Colors.red.shade300),
+            const SizedBox(height: 16),
+            Text(
+              _errorMessage!,
+              textAlign: TextAlign.center,
+              style:
+                  const TextStyle(fontSize: 16, color: AppColors.textPrimary),
+            ),
+            const SizedBox(height: 24),
+            ElevatedButton(
+              onPressed: () {
+                setState(() {
+                  _errorMessage = null;
+                  _isLoading = true;
+                });
+                _initWebView();
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primary,
+                foregroundColor: Colors.white,
               ),
-            ],
+              child: const Text('Try Again'),
+            ),
           ],
         ),
       ),
     );
-  }
-
-  Future<void> _handleSavePaymentMethod() async {
-    try {
-      // Create payment method using Stripe
-      final paymentMethod = await Stripe.instance.createPaymentMethod(
-        params: const PaymentMethodParams.card(
-          paymentMethodData: PaymentMethodData(),
-        ),
-      );
-
-      if (paymentMethod.id.isEmpty) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Failed to create payment method'),
-              backgroundColor: Colors.red,
-            ),
-          );
-        }
-        return;
-      }
-
-      // Save payment method to backend
-      final paymentProvider = context.read<PaymentMethodProvider>();
-      final success = await paymentProvider.savePaymentMethod(paymentMethod.id);
-
-      if (success && mounted) {
-        // Update user's payment ID in auth provider
-        final authProvider = context.read<AuthProvider>();
-        await authProvider.refreshProfile();
-
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Payment method added successfully!'),
-            backgroundColor: Colors.green,
-          ),
-        );
-
-        // Navigate back
-        context.pop(true); // Return true to indicate success
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error: ${e.toString()}'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
-    }
   }
 }

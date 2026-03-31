@@ -28,7 +28,7 @@ class PaymentMethodRemoteDataSourceImpl implements PaymentMethodRemoteDataSource
       PaymentMethodRequestModel request) async {
     try {
       final response = await apiClient.post(
-        '/payment',
+        '/payment/',
         data: request.toJson(),
       );
 

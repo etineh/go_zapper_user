@@ -54,21 +54,36 @@ class DeliveryRemoteDataSourceImpl implements DeliveryRemoteDataSource {
       ),
     );
 
-    // Add interceptors for API Key authentication (Delivery service only)
+    // Add interceptors for authentication (Delivery service)
+    // Supports both Stripe API keys and Paystack customer codes
     _dio.interceptors.add(
       InterceptorsWrapper(
         onRequest: (options, handler) async {
-          // Add API Key as Bearer token to requests for delivery service
+          // For Paystack: try to use payment_id (customer code) as Bearer token
+          final paymentId = await _storage.read(key: 'paymentId');
+
+          // For Stripe (backward compatibility): use API key as Bearer token
           final apiKey = await _storage.read(key: AppConstants.apiKeyKey);
-          print('🔑 Delivery API - API Key found: ${apiKey != null}');
-          if (apiKey != null && apiKey.isNotEmpty) {
-            print('🔍 API Key length: ${apiKey.length}');
-            print(
-                '🔍 API Key prefix: ${apiKey.substring(0, apiKey.length < 20 ? apiKey.length : 20)}...');
+
+          String? authToken;
+          if (paymentId != null && paymentId.isNotEmpty) {
+            // Paystack: encode as CUS_xxx|orgId so backend can extract organization ID
+            final orgId = await _storage.read(key: 'organizationId');
+            authToken = orgId != null && orgId.isNotEmpty
+                ? '$paymentId|$orgId'
+                : paymentId;
+            print('🔑 Delivery API - Using Paystack customer code with org ID');
+          } else if (apiKey != null && apiKey.isNotEmpty) {
+            // Stripe API key (backward compatibility)
+            authToken = apiKey;
+            print('🔑 Delivery API - Using Stripe API key');
+          }
+
+          if (authToken != null && authToken.isNotEmpty) {
             print('✅ Adding Authorization Bearer header to delivery request');
-            options.headers['Authorization'] = 'Bearer $apiKey';
+            options.headers['Authorization'] = 'Bearer $authToken';
           } else {
-            print('⚠️ WARNING: No API key found or empty!');
+            print('⚠️ WARNING: No payment ID or API key found!');
           }
           return handler.next(options);
         },

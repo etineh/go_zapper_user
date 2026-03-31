@@ -383,13 +383,18 @@ class _DeliveryDetailScreenState extends State<DeliveryDetailScreen> {
       // Refresh delivery status
       await _refreshDeliveryStatus();
     } else if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content:
-              Text(deliveryProvider.errorMessage ?? 'Failed to accept quote'),
-          backgroundColor: Colors.red,
-        ),
-      );
+      final errorMsg = deliveryProvider.errorMessage ?? '';
+      if (errorMsg.toLowerCase().contains('no payment authorization')) {
+        _showAddPaymentMethodDialog();
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+                errorMsg.isNotEmpty ? errorMsg : 'Failed to accept quote'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
     }
   }
 

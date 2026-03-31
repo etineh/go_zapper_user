@@ -11,7 +11,6 @@ import 'package:gozapper/core/utils/geocoding_helper.dart';
 import 'package:gozapper/core/utils/snackbar_utils.dart';
 import 'package:gozapper/data/models/quote_request_model.dart';
 import 'package:gozapper/presentation/providers/auth_provider.dart';
-import 'package:gozapper/presentation/providers/credential_provider.dart';
 import 'package:gozapper/presentation/providers/delivery_provider.dart';
 import 'package:gozapper/presentation/widgets/custom_app_bar.dart';
 import 'package:gozapper/presentation/widgets/location_picker.dart';
@@ -430,47 +429,19 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
       return;
     }
 
-    // Check if user has credentials before generating quote (API key required)
+    // Check if user has payment method for Paystack
     final authProvider = context.read<AuthProvider>();
     final user = authProvider.user;
-    final credentialProvider = context.read<CredentialProvider>();
 
-    if (user != null &&
-        user.sandboxCredential == false &&
-        user.productionCredential == false) {
-      context.showLoadingDialog();
-      // No credentials exist, create sandbox credential automatically
-      final credentialCreated =
-          await credentialProvider.createSandboxCredential(
-        'Auto-generated Sandbox Credential',
+    // With Paystack integration, we only need a payment method, not API credentials
+    if (user == null || user.paymentId == null || user.paymentId!.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please add a payment method before creating a delivery'),
+          backgroundColor: Colors.orange,
+        ),
       );
-      if (mounted) context.hideLoadingDialog();
-
-      if (!credentialCreated && mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              credentialProvider.errorMessage ??
-                  'Failed to create API credential',
-            ),
-            backgroundColor: Colors.red,
-          ),
-        );
-        return;
-      }
-
-      // Refresh user profile to update credential flags
-      await authProvider.refreshProfile();
-
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Sandbox API credential created automatically!'),
-            backgroundColor: Colors.green,
-            duration: Duration(seconds: 2),
-          ),
-        );
-      }
+      return;
     }
 
     final request = QuoteRequestModel(
@@ -649,45 +620,7 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
       return;
     }
 
-    // Step 1: Check if user has credentials (sandbox or production)
-    // If both are false, auto-create sandbox credential
-    final credentialProvider = context.read<CredentialProvider>();
-
-    if (user.sandboxCredential == false && user.productionCredential == false) {
-      // No credentials exist, create sandbox credential automatically
-      final credentialCreated =
-          await credentialProvider.createSandboxCredential(
-        'Auto-generated Sandbox Credential',
-      );
-
-      if (!credentialCreated && mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              credentialProvider.errorMessage ??
-                  'Failed to create API credential',
-            ),
-            backgroundColor: Colors.red,
-          ),
-        );
-        return;
-      }
-
-      // Refresh user profile to update credential flags
-      await authProvider.refreshProfile();
-
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Sandbox API credential created automatically!'),
-            backgroundColor: Colors.green,
-            duration: Duration(seconds: 2),
-          ),
-        );
-      }
-    }
-
-    // Step 2: Check if user has payment method (paymentId)
+    // Check if user has payment method (Paystack integration - no API credentials needed)
     if (user.paymentId == null || user.paymentId!.isEmpty) {
       // Show dialog to add payment method
       if (mounted) {
@@ -696,8 +629,8 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
       return;
     }
 
-    // Step 3: User has both credentials and payment method, proceed with accepting quote
-    // The backend will automatically charge when quote is accepted
+    // User has payment method, proceed with accepting quote
+    // The backend will automatically charge using the saved Paystack authorization
     final deliveryProvider = context.read<DeliveryProvider>();
     final success = await deliveryProvider.acceptQuote();
 
@@ -711,13 +644,18 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
       deliveryProvider.resetQuote();
       context.pop();
     } else if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-              deliveryProvider.errorMessage ?? 'Failed to create delivery'),
-          backgroundColor: Colors.red,
-        ),
-      );
+      final errorMsg = deliveryProvider.errorMessage ?? '';
+      if (errorMsg.toLowerCase().contains('no payment authorization')) {
+        _showAddPaymentMethodDialog();
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+                errorMsg.isNotEmpty ? errorMsg : 'Failed to create delivery'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
     }
   }
 

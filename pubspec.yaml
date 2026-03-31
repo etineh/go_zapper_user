@@ -59,8 +59,8 @@ dependencies:
   permission_handler: ^11.3.1
 #  share_plus: ^14.0.0
 
-  # Payment
-  flutter_stripe: 11.1.0
+  # Payment (Paystack via WebView)
+  webview_flutter: ^4.10.0
 
   # Maps & Location
   geocoding: ^3.0.0
@@ -75,10 +75,6 @@ dependencies:
   awesome_notifications: ^0.9.3
 
 dependency_overrides:
-  stripe_platform_interface: 11.1.0
-  flutter_stripe: 11.1.0
-  stripe_android: 11.1.0
-  stripe_ios: 11.1.0
   geolocator_android: 4.6.1
 
 dev_dependencies:
