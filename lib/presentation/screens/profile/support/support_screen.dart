@@ -3,6 +3,9 @@ import 'package:go_router/go_router.dart';
 import 'package:gozapper/core/constants/app_colors.dart';
 import 'package:gozapper/core/constants/app_routes.dart';
 import 'package:gozapper/core/extension/inbuilt_ext.dart';
+import 'package:gozapper/core/network/api_client.dart';
+import 'package:gozapper/data/datasources/support_remote_datasource.dart';
+import 'package:gozapper/data/repositories/support_repo_impl.dart';
 import 'package:gozapper/presentation/providers/auth_provider.dart';
 import 'package:gozapper/presentation/widgets/custom_app_bar.dart';
 import 'package:provider/provider.dart';
@@ -39,8 +42,7 @@ class _SupportScreenState extends State<SupportScreen> {
 
     if (user != null) {
       setState(() {
-        _fullNameController.text =
-            '${user.firstName} ${user.lastName}'.trim();
+        _fullNameController.text = '${user.firstName} ${user.lastName}'.trim();
         _emailController.text = user.email;
       });
     }
@@ -91,14 +93,14 @@ class _SupportScreenState extends State<SupportScreen> {
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (context) => Dialog(
+      builder: (context) => const Dialog(
         backgroundColor: AppColors.background,
         child: Padding(
-          padding: const EdgeInsets.all(24),
+          padding: EdgeInsets.all(24),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const SizedBox(
+              SizedBox(
                 width: 50,
                 height: 50,
                 child: CircularProgressIndicator(
@@ -106,8 +108,8 @@ class _SupportScreenState extends State<SupportScreen> {
                   color: AppColors.primary,
                 ),
               ),
-              const SizedBox(height: 16),
-              const Text(
+              SizedBox(height: 16),
+              Text(
                 'Sending your enquiry...',
                 style: TextStyle(
                   fontSize: 14,
@@ -121,14 +123,33 @@ class _SupportScreenState extends State<SupportScreen> {
       ),
     );
 
-    // Simulate API call with 2 second delay
-    await Future.delayed(const Duration(seconds: 2));
+    final apiClient = ApiClient();
+    final dataSource = SupportRemoteDataSourceImpl(apiClient: apiClient);
+    final repo = SupportRepositoryImpl(remoteDataSource: dataSource);
 
-    if (mounted) {
-      Navigator.pop(context); // Close loading dialog
-      // Navigate to success screen
-      context.push(AppRoutes.supportSuccess);
-    }
+    final result = await repo.submitEnquiry(
+      fullName: _fullNameController.text.trim(),
+      email: _emailController.text.trim(),
+      enquiry: _enquiryController.text.trim(),
+    );
+
+    if (!mounted) return;
+    Navigator.pop(context); // Close loading dialog
+
+    result.fold(
+      (failure) {
+        setState(() => _isSubmitting = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(failure.message ?? 'Failed to send enquiry. Please try again.'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      },
+      (_) {
+        context.push(AppRoutes.supportSuccess);
+      },
+    );
   }
 
   @override
